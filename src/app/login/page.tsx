@@ -2,12 +2,18 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const { login, signup } = useAuth();
 
   return (
     <main className="min-h-screen bg-[#09070c] relative overflow-hidden flex items-center justify-center px-4 py-12">
@@ -145,7 +151,25 @@ export default function LoginPage() {
 
             {/* Form */}
             <form
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setError("");
+                setLoading(true);
+                try {
+                  const ok = isSignUp
+                    ? await signup(username, email, password)
+                    : await login(email, password);
+                  if (ok) {
+                    const onboarded = localStorage.getItem("soulz_onboarded");
+                    router.push(onboarded ? "/dashboard" : "/onboarding");
+                  }
+                  else setError("Invalid credentials. Try demo@soulz.lol / demo1234");
+                } catch {
+                  setError("Something went wrong.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
               className="flex flex-col gap-4"
             >
               {isSignUp && (
@@ -216,13 +240,21 @@ export default function LoginPage() {
                 />
               </div>
 
+              {/* Error */}
+              {error && (
+                <div className="text-red-400 text-xs text-center bg-red-500/10 border border-red-500/20 rounded-xl py-2.5 px-4">
+                  {error}
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 id="submit-login-btn"
                 type="submit"
-                className="w-full py-3.5 mt-2 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-500 transition-all shadow-[0_0_25px_rgba(139,92,246,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] active:scale-[0.98]"
+                disabled={loading}
+                className="w-full py-3.5 mt-2 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-500 transition-all shadow-[0_0_25px_rgba(139,92,246,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
               </button>
             </form>
 

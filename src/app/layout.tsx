@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter, Outfit } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,7 +41,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans dark text-foreground">
         <div className="fixed inset-0 min-h-screen z-[-1] bg-[#0c0a09] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,30,250,0.15),rgba(255,255,255,0))]"></div>
-        {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
       </body>
     </html>
   );

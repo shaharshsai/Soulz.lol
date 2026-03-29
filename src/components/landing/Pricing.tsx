@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const plans = [
   {
@@ -94,15 +95,16 @@ export function Pricing() {
               ))}
             </ul>
 
-            <button 
-              className={`w-full py-4 rounded-2xl font-bold transition-all ${
+            <Link 
+              href={plan.price === "$0" ? "/login" : `/payment?plan=${plan.name.toLowerCase()}`}
+              className={`w-full py-4 rounded-2xl font-bold transition-all text-center block ${
                 plan.highlight 
                   ? 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_10px_30px_rgba(139,92,246,0.3)]' 
                   : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
               }`}
             >
               {plan.buttonText}
-            </button>
+            </Link>
           </div>
         ))}
       </div>
