@@ -401,7 +401,7 @@ export default function DashboardPage() {
 
             {/* Links List */}
             <div className="flex flex-col gap-3">
-              {links.map((link, i) => (
+              {links.map((link) => (
                 <div
                   key={link.id}
                   className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 flex items-center justify-between group hover:bg-white/[0.04] hover:border-white/10 transition-all"

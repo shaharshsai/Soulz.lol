@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 export interface MockUser {
   id: string;
@@ -16,7 +22,7 @@ interface AuthContextType {
   user: MockUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (username: string, email: string, password: string) => Promise<boolean>;
+  signup: (username: string, email: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -48,6 +54,57 @@ const MOCK_USERS: Record<string, { password: string; user: MockUser }> = {
 };
 
 const STORAGE_KEY = "soulz_mock_auth";
+const AUTH_STORAGE_EVENT = "soulz-auth-change";
+const hydrationListeners = new Set<() => void>();
+let hasHydrated = false;
+
+function subscribeToAuth(onChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  window.addEventListener("storage", onChange);
+  window.addEventListener(AUTH_STORAGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(AUTH_STORAGE_EVENT, onChange);
+  };
+}
+
+function getAuthSnapshot(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function subscribeToHydration(onChange: () => void) {
+  hydrationListeners.add(onChange);
+  return () => hydrationListeners.delete(onChange);
+}
+
+function getHydrationSnapshot() {
+  return hasHydrated;
+}
+
+function getServerHydrationSnapshot() {
+  return false;
+}
+
+function notifyAuthChanged() {
+  window.dispatchEvent(new Event(AUTH_STORAGE_EVENT));
+}
+
+function storeUser(user: MockUser) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  notifyAuthChanged();
+}
+
+function removeStoredUser() {
+  window.localStorage.removeItem(STORAGE_KEY);
+  notifyAuthChanged();
+}
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -58,18 +115,30 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<MockUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const storedUser = useSyncExternalStore(
+    subscribeToAuth,
+    getAuthSnapshot,
+    () => null,
+  );
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const user = useMemo(() => {
+    if (!storedUser) return null;
 
-  // Load user from localStorage on mount
-  useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
-      }
-    } catch {}
-    setIsLoading(false);
+      return JSON.parse(storedUser) as MockUser;
+    } catch {
+      return null;
+    }
+  }, [storedUser]);
+  const isLoading = !isHydrated;
+
+  useEffect(() => {
+    hasHydrated = true;
+    hydrationListeners.forEach((listener) => listener());
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -78,8 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const entry = MOCK_USERS[email.toLowerCase()];
     if (entry && entry.password === password) {
-      setUser(entry.user);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entry.user));
+      storeUser(entry.user);
       return true;
     }
 
@@ -93,12 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       plan: "free",
       createdAt: new Date().toISOString(),
     };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    storeUser(newUser);
     return true;
   };
 
-  const signup = async (username: string, email: string, password: string): Promise<boolean> => {
+  const signup = async (username: string, email: string): Promise<boolean> => {
     await new Promise((r) => setTimeout(r, 600));
 
     const newUser: MockUser = {
@@ -110,14 +177,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       plan: "free",
       createdAt: new Date().toISOString(),
     };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    storeUser(newUser);
     return true;
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    removeStoredUser();
   };
 
   return (
