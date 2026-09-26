@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -13,9 +12,11 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   // Step 1 - Profile
-  const [displayName, setDisplayName] = useState("");
-  const [linkSlug, setLinkSlug] = useState("");
+  const [displayNameDraft, setDisplayNameDraft] = useState<string | null>(null);
+  const [linkSlugDraft, setLinkSlugDraft] = useState<string | null>(null);
   const [bio, setBio] = useState("");
+  const displayName = displayNameDraft ?? user?.displayName ?? "";
+  const linkSlug = linkSlugDraft ?? user?.username ?? "";
 
   // Step 2 - Theme
   const [selectedTheme, setSelectedTheme] = useState("dark-glass");
@@ -29,13 +30,7 @@ export default function OnboardingPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
-    }
-    if (user) {
-      setDisplayName(user.displayName || "");
-      setLinkSlug(user.username || "");
-    }
+    if (!isLoading && !user) router.push("/login");
   }, [user, isLoading, router]);
 
   if (isLoading || !user) {
@@ -157,7 +152,7 @@ export default function OnboardingPage() {
                     <input
                       type="text"
                       value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      onChange={(e) => setDisplayNameDraft(e.target.value)}
                       placeholder="e.g. Arjun Sharma"
                       className={inputClass}
                     />
@@ -170,7 +165,7 @@ export default function OnboardingPage() {
                       <input
                         type="text"
                         value={linkSlug}
-                        onChange={(e) => setLinkSlug(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                        onChange={(e) => setLinkSlugDraft(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
                         placeholder="yourname"
                         className={`${inputClass} pl-[88px]`}
                       />

@@ -157,7 +157,7 @@ export default function LoginPage() {
                 setLoading(true);
                 try {
                   const ok = isSignUp
-                    ? await signup(username, email, password)
+                    ? await signup(username, email)
                     : await login(email, password);
                   if (ok) {
                     const onboarded = localStorage.getItem("soulz_onboarded");
